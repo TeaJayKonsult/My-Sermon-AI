@@ -77,7 +77,7 @@ STRUCTURE:
 
 1. OPENING PRAYER: A prayer that sets the spiritual tone for the message. Specific to the topic.
 
-2. TITLE: A compelling, scripture-based title that captures the heart of the message.
+2. TITLE: A compelling, scripture-based title that captures the heart of the message. Give the central bible reading. For example, Hebrew 11:1-5
 
 3. INTRODUCTION: A few introductory words to set the stage. Define the topic in simple, layman's terms so the congregation can understand even before you dive into the main points.
 
