@@ -1253,16 +1253,42 @@
       }
     };
 
-    // ====== UPDATED GOOGLE SIGN-IN ======
+    // ====== UPDATED GOOGLE SIGN-IN WITH ACCOUNT LINKING ======
     async function signInWithGoogle() {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
         const result = await auth.signInWithPopup(provider);
         showToast('✅ Signed in with Google!');
-        // Force page reload to ensure the dashboard shows
         window.location.reload();
       } catch (err) {
-        if (err.code === 'auth/popup-closed-by-user') {
+        // Handle account exists with different credential (email/password already used)
+        if (err.code === 'auth/account-exists-with-different-credential') {
+          const email = err.email;
+          if (email) {
+            const password = prompt(
+              'This email is already registered with a password.\n' +
+              'Please enter your password to link your Google account:'
+            );
+            if (password) {
+              try {
+                // Sign in with email/password first
+                const cred = firebase.auth.EmailAuthProvider.credential(email, password);
+                const userCred = await auth.signInWithCredential(cred);
+                // Now link the Google credential
+                const googleCred = err.credential;
+                await userCred.user.linkWithCredential(googleCred);
+                showToast('✅ Google account linked successfully!');
+                window.location.reload();
+              } catch (linkErr) {
+                showToast('❌ Failed to link accounts: ' + linkErr.message);
+              }
+            } else {
+              showToast('⚠️ Password required to link accounts.');
+            }
+          } else {
+            showToast('❌ Account exists with different credentials. Please sign in with your password first.');
+          }
+        } else if (err.code === 'auth/popup-closed-by-user') {
           showToast('⚠️ Sign-in cancelled.');
         } else {
           showToast('❌ Google Sign-In failed: ' + err.message);
