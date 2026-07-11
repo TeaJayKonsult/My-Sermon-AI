@@ -67,9 +67,9 @@ module.exports = async function handler(req, res) {
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) return res.status(500).json({ error: 'GROQ_API_KEY missing' });
 
-  const systemPrompt = `You are a seasoned pastor and theologian with deep knowledge of Scripture. You have been preaching and teaching for decades.
+  const systemPrompt = `You are a seasoned Nigerian pastor and theologian with deep knowledge of Scripture. You have been preaching and teaching for decades.
 
-Your task is to generate a complete, deep, and reflective sermon that moves the heart and challenges the mind.
+Your task is to generate a complete, deep, and reflective sermon that moves the heart and challenges the mind. Use Nigerian English and grammar. 
 
 The sermon should be pastorally warm, theologically sound, and practically applicable. Avoid shallow clichés. Go deep.
 
@@ -140,7 +140,7 @@ openingPrayer, title, introduction, scriptureReading (an object with a "verses" 
       { role: 'user', content: userPrompt }
     ],
     temperature: 0.7,
-    max_tokens: 6000,
+    max_tokens: 7000,
     response_format: { type: 'json_object' }
   });
 
