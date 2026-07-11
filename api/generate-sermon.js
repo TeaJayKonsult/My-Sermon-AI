@@ -126,7 +126,7 @@ STYLE:
 - Deep and reflective, not shallow
 - Accessible yet profound
 - Use scripture naturally and meaningfully
-- Aim for 2500-3500 words minimum for a full sermon
+- Aim for 4000-6000 words minimum for a full sermon
 
 Return the response as a JSON object with the following keys:
 openingPrayer, title, introduction, scriptureReading (an object with a "verses" array of {reference, text}), mainPoints (array of objects with title, explanation, supportingScriptures (array of {reference, text}), consequences (an object with "advantages" array and "disadvantages" array)), illustrations (array), conclusion, callToPrayer (array), closingPrayer.`;
@@ -140,7 +140,7 @@ openingPrayer, title, introduction, scriptureReading (an object with a "verses" 
       { role: 'user', content: userPrompt }
     ],
     temperature: 0.7,
-    max_tokens: 2500,
+    max_tokens: 8000,
     response_format: { type: 'json_object' }
   });
 
