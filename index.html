@@ -45,15 +45,11 @@
       background-size: 180px 180px;
       background-attachment: fixed;
     }
-    h1,
-    h2,
-    h3,
-    h4 {
+    h1,h2,h3,h4 {
       font-family: var(--font-serif);
       font-weight: 700;
       letter-spacing: 0.02em;
     }
-    /* Warm glow overlay */
     body::before {
       content: '';
       position: fixed;
@@ -445,6 +441,8 @@
       pointer-events: none;
       z-index: 0;
     }
+
+    /* Sidebar – Desktop & Mobile */
     .dashboard-sidebar {
       width: 280px;
       background: rgba(11, 14, 26, 0.7);
@@ -456,6 +454,7 @@
       position: relative;
       z-index: 1;
       flex-shrink: 0;
+      transition: transform 0.3s ease;
     }
     .dashboard-sidebar .sidebar-header {
       padding: 20px;
@@ -535,6 +534,7 @@
       color: #d47a7a;
     }
 
+    /* Main content */
     .dashboard-main {
       flex: 1;
       padding: 24px;
@@ -563,6 +563,18 @@
       color: var(--heavenly-gold);
     }
 
+    /* Hamburger menu button */
+    #menuToggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--heavenly-cream);
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    /* Tabs */
     .heavenly-tabs {
       display: flex;
       gap: 8px;
@@ -682,6 +694,7 @@
       margin-top: 16px;
     }
 
+    /* Sermon output */
     .sermon-output {
       background: rgba(11, 14, 26, 0.3);
       border: 1px solid var(--heavenly-border);
@@ -743,9 +756,6 @@
       padding: 12px 16px;
       margin-top: 6px;
     }
-    .sermon-output .sermon-point .pconsequence .advantages {
-      margin-bottom: 8px;
-    }
     .sermon-output .sermon-point .pconsequence .advantages .label {
       color: #7ac7c9;
       font-size: 12px;
@@ -789,12 +799,8 @@
       margin: 0 auto 12px;
     }
     @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     .toast {
@@ -884,18 +890,40 @@
       line-height: 1.6;
     }
 
+    /* ====== MOBILE RESPONSIVE (FIXED HAMBURGER) ====== */
     @media (max-width: 768px) {
-      .dashboard-sidebar {
-        display: none;
+      /* Show hamburger button */
+      #menuToggle {
+        display: block;
       }
-      .dashboard-sidebar.open {
-        display: flex;
+      /* Sidebar hidden by default, slides in */
+      .dashboard-sidebar {
         position: fixed;
-        left: 0;
+        left: -300px;
         top: 0;
         bottom: 0;
         width: 280px;
-        z-index: 100;
+        z-index: 200;
+        background: rgba(11, 14, 26, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-right: 1px solid var(--heavenly-border);
+        transition: left 0.3s ease;
+        flex-shrink: 0;
+      }
+      .dashboard-sidebar.open {
+        left: 0;
+      }
+      /* Overlay to close sidebar when clicking outside */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 199;
+      }
+      .sidebar-overlay.active {
+        display: block;
       }
       .dashboard-main {
         padding: 16px;
@@ -995,7 +1023,7 @@
 
   <!-- ====== DASHBOARD ====== -->
   <div id="dashboardWrapper" class="dashboard-wrapper" style="display:none;">
-    <!-- Sidebar -->
+    <!-- Sidebar (mobile toggle) -->
     <div class="dashboard-sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>✝️ My<span>Sermon AI</span></h2>
@@ -1008,15 +1036,18 @@
         <button id="signOutBtn">Sign Out</button>
       </div>
     </div>
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
     <!-- Main -->
     <div class="dashboard-main">
       <div class="app-header">
+        <button id="menuToggle" onclick="toggleSidebar()">☰</button>
         <div class="user-info">
           <h3>Welcome, <span id="userName">Pastor</span></h3>
           <p>Saved sermons: <span id="sermonCount">0</span></p>
         </div>
-        <button class="heavenly-btn-outline" onclick="toggleSidebar()" style="display:none;" id="menuToggle">☰ Menu</button>
+        <button class="heavenly-btn-outline" onclick="location.reload()" style="font-size:12px; padding:4px 12px;">🔄 Refresh</button>
       </div>
 
       <!-- Tabs -->
@@ -1116,6 +1147,7 @@
     const sermonCountEl = document.getElementById('sermonCount');
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menuToggle');
+    const overlay = document.getElementById('sidebarOverlay');
 
     // ====== STATE ======
     let currentUser = null;
@@ -1142,14 +1174,13 @@
     }
     function togglePassword(id, btn) {
       const input = document.getElementById(id);
-      if (input.type === 'password') { input.type = 'text';
-        btn.textContent = '🙈'; } else { input.type = 'password';
-        btn.textContent = '👁️'; }
+      if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; } else { input.type = 'password'; btn.textContent = '👁️'; }
     }
 
     // ====== TOGGLE SIDEBAR ======
     function toggleSidebar() {
       sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
     }
 
     // ====== AUTH ======
@@ -1272,7 +1303,6 @@
         currentUser = user;
         landingPage.style.display = 'none';
         dashboardWrapper.style.display = 'flex';
-        if (window.innerWidth <= 768) menuToggle.style.display = 'block';
         const doc = await db.collection('users').doc(user.uid).get();
         if (doc.exists) {
           userData = doc.data();
@@ -1391,28 +1421,28 @@
       }
     });
 
-    // ====== DISPLAY SERMON (UPDATED) ======
+    // ====== DISPLAY SERMON (FULL SECTIONS) ======
     function displaySermon(data) {
       const output = document.getElementById('sermonOutput');
       const c = data.content;
       let html = '';
 
-      // Opening Prayer
+      // 1. Opening Prayer
       if (c.openingPrayer) {
         html += `<div class="sermon-section"><div class="label">🙏 Opening Prayer</div><div class="content">${escapeHtml(c.openingPrayer)}</div></div>`;
       }
 
-      // Title
+      // 2. Title
       if (c.title) {
         html += `<div class="sermon-section"><div class="label">📝 Title</div><div class="content"><strong>${escapeHtml(c.title)}</strong></div></div>`;
       }
 
-      // Introduction (NEW)
+      // 3. Introduction
       if (c.introduction) {
         html += `<div class="sermon-section"><div class="label">📖 Introduction</div><div class="content">${escapeHtml(c.introduction)}</div></div>`;
       }
 
-      // Scripture Reading
+      // 4. Scripture Reading
       if (c.scriptureReading) {
         html += `<div class="sermon-section"><div class="label">📖 Scripture Reading</div>`;
         if (c.scriptureReading.verses) {
@@ -1423,7 +1453,7 @@
         html += `</div>`;
       }
 
-      // Main Points
+      // 5. Main Points
       if (c.mainPoints && c.mainPoints.length) {
         html += `<div class="sermon-section"><div class="label">📌 Main Points</div>`;
         c.mainPoints.forEach((p, i) => {
@@ -1433,7 +1463,6 @@
           if (p.supportingScriptures && p.supportingScriptures.length) {
             html += `<div class="pscripture">📖 ${p.supportingScriptures.map(s => escapeHtml(s.reference)).join(', ')}</div>`;
           }
-          // Consequences - Advantages first, then Disadvantages
           if (p.consequences) {
             html += `<div class="pconsequence">`;
             if (p.consequences.advantages && p.consequences.advantages.length) {
@@ -1458,22 +1487,22 @@
         html += `</div>`;
       }
 
-      // Illustrations
+      // 6. Illustrations
       if (c.illustrations && c.illustrations.length) {
         html += `<div class="sermon-section"><div class="label">💡 Illustrations</div><div class="content">${c.illustrations.map(i => '• ' + escapeHtml(i)).join('<br>')}</div></div>`;
       }
 
-      // Conclusion
+      // 7. Conclusion
       if (c.conclusion) {
         html += `<div class="sermon-section"><div class="label">📝 Conclusion</div><div class="content">${escapeHtml(c.conclusion)}</div></div>`;
       }
 
-      // Call to Prayer
+      // 8. Call to Prayer
       if (c.callToPrayer && c.callToPrayer.length) {
         html += `<div class="sermon-section"><div class="label">🙏 Call to Prayer</div><div class="content">${c.callToPrayer.map(p => '• ' + escapeHtml(p)).join('<br>')}</div></div>`;
       }
 
-      // Closing Prayer
+      // 9. Closing Prayer
       if (c.closingPrayer) {
         html += `<div class="sermon-section"><div class="label">🙏 Closing Prayer</div><div class="content">${escapeHtml(c.closingPrayer)}</div></div>`;
       }
@@ -1630,21 +1659,23 @@
       showToast('✅ PDF downloaded');
     });
 
-    // ====== MENU TOGGLE ======
-    menuToggle.addEventListener('click', toggleSidebar);
-    document.addEventListener('click', (e) => {
-      if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== menuToggle) {
-        sidebar.classList.remove('open');
+    // ====== SIDEBAR CLOSE ON OVERLAY CLICK ======
+    document.addEventListener('click', function(e) {
+      if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('menuToggle');
+        if (!sidebar.contains(e.target) && e.target !== toggle && !toggle.contains(e.target)) {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('active');
+        }
       }
     });
 
-    // ====== RESPONSIVE ======
+    // Close sidebar on resize to desktop
     window.addEventListener('resize', () => {
       if (window.innerWidth > 768) {
-        sidebar.classList.remove('open');
-        menuToggle.style.display = 'none';
-      } else {
-        menuToggle.style.display = 'block';
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('active');
       }
     });
   </script>
