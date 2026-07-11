@@ -140,7 +140,7 @@ openingPrayer, title, introduction, scriptureReading (an object with a "verses" 
       { role: 'user', content: userPrompt }
     ],
     temperature: 0.7,
-    max_tokens: 8000,
+    max_tokens: 6000,
     response_format: { type: 'json_object' }
   });
 
