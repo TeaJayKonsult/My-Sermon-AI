@@ -1253,17 +1253,21 @@
       }
     };
 
+    // ====== UPDATED GOOGLE SIGN-IN ======
     async function signInWithGoogle() {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
+        const result = await auth.signInWithPopup(provider);
         showToast('✅ Signed in with Google!');
+        // Force page reload to ensure the dashboard shows
+        window.location.reload();
       } catch (err) {
         if (err.code === 'auth/popup-closed-by-user') {
           showToast('⚠️ Sign-in cancelled.');
         } else {
           showToast('❌ Google Sign-In failed: ' + err.message);
         }
+        console.error('Google Sign-In error:', err);
       }
     }
     window.signInWithGoogle = signInWithGoogle;
@@ -1303,6 +1307,7 @@
         currentUser = user;
         landingPage.style.display = 'none';
         dashboardWrapper.style.display = 'flex';
+        if (window.innerWidth <= 768) menuToggle.style.display = 'block';
         const doc = await db.collection('users').doc(user.uid).get();
         if (doc.exists) {
           userData = doc.data();
