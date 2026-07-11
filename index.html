@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#0b0e1a">
   <meta name="description" content="My Sermon AI — Generate deep, reflective sermons with AI. Listen, take notes, and save your sermons.">
   <title>My Sermon AI | TeaJay Konsult Ltd.</title>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Georgia:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -182,7 +185,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      background: url('https://pixabay.com/get/gc0b9b0f4b134fdb7c777f8e6d1d69e1fca14bac72310ebbb9c7b26b56a5573c04409dbcd0b1754d616f9c019ae673c8f4aacf1fc29c5504ddadbf3516ffd37de_1280.jpg') center/cover no-repeat;
+      background: url('https://images.unsplash.com/photo-1518079622687-1f22c19a2db2?w=1200') center/cover no-repeat;
       background-attachment: fixed;
     }
     .heavenly-landing .overlay {
@@ -890,13 +893,11 @@
       line-height: 1.6;
     }
 
-    /* ====== MOBILE RESPONSIVE (FIXED HAMBURGER) ====== */
+    /* ====== MOBILE RESPONSIVE ====== */
     @media (max-width: 768px) {
-      /* Show hamburger button */
       #menuToggle {
         display: block;
       }
-      /* Sidebar hidden by default, slides in */
       .dashboard-sidebar {
         position: fixed;
         left: -300px;
@@ -914,7 +915,6 @@
       .dashboard-sidebar.open {
         left: 0;
       }
-      /* Overlay to close sidebar when clicking outside */
       .sidebar-overlay {
         display: none;
         position: fixed;
@@ -938,6 +938,50 @@
       .live-notes-area .note-input {
         flex-direction: column;
       }
+    }
+
+    /* ====== PWA INSTALL BUTTON ====== */
+    .fab {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: linear-gradient(135deg, var(--heavenly-gold), #b8942e);
+      border: none;
+      border-radius: 40px;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #0b0e1a;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 20px rgba(201, 168, 76, 0.3);
+      z-index: 999;
+    }
+    .fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(201, 168, 76, 0.4);
+    }
+
+    .ios-banner {
+      display: none;
+      background: rgba(11, 14, 26, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--heavenly-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      position: fixed;
+      bottom: 16px;
+      left: 14px;
+      right: 14px;
+      z-index: 998;
+      font-size: 12px;
+      color: var(--sub);
+      text-align: center;
+    }
+    .ios-banner strong {
+      color: var(--heavenly-gold);
     }
   </style>
 </head>
@@ -1023,7 +1067,7 @@
 
   <!-- ====== DASHBOARD ====== -->
   <div id="dashboardWrapper" class="dashboard-wrapper" style="display:none;">
-    <!-- Sidebar (mobile toggle) -->
+    <!-- Sidebar -->
     <div class="dashboard-sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>✝️ My<span>Sermon AI</span></h2>
@@ -1111,6 +1155,14 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ====== PWA INSTALL BUTTON ====== -->
+  <div id="installBtn" class="fab">📲 Install App</div>
+
+  <!-- ====== IOS BANNER ====== -->
+  <div id="iosBanner" class="ios-banner">
+    📱 To install on iPhone: tap <strong>Share</strong> → <strong>Add to Home Screen</strong>
   </div>
 
   <script>
@@ -1253,7 +1305,7 @@
       }
     };
 
-    // ====== UPDATED GOOGLE SIGN-IN WITH ACCOUNT LINKING ======
+    // ====== GOOGLE SIGN-IN ======
     async function signInWithGoogle() {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -1261,7 +1313,6 @@
         showToast('✅ Signed in with Google!');
         window.location.reload();
       } catch (err) {
-        // Handle account exists with different credential (email/password already used)
         if (err.code === 'auth/account-exists-with-different-credential') {
           const email = err.email;
           if (email) {
@@ -1271,10 +1322,8 @@
             );
             if (password) {
               try {
-                // Sign in with email/password first
                 const cred = firebase.auth.EmailAuthProvider.credential(email, password);
                 const userCred = await auth.signInWithCredential(cred);
-                // Now link the Google credential
                 const googleCred = err.credential;
                 await userCred.user.linkWithCredential(googleCred);
                 showToast('✅ Google account linked successfully!');
@@ -1452,28 +1501,21 @@
       }
     });
 
-    // ====== DISPLAY SERMON (FULL SECTIONS) ======
+    // ====== DISPLAY SERMON ======
     function displaySermon(data) {
       const output = document.getElementById('sermonOutput');
       const c = data.content;
       let html = '';
 
-      // 1. Opening Prayer
       if (c.openingPrayer) {
         html += `<div class="sermon-section"><div class="label">🙏 Opening Prayer</div><div class="content">${escapeHtml(c.openingPrayer)}</div></div>`;
       }
-
-      // 2. Title
       if (c.title) {
         html += `<div class="sermon-section"><div class="label">📝 Title</div><div class="content"><strong>${escapeHtml(c.title)}</strong></div></div>`;
       }
-
-      // 3. Introduction
       if (c.introduction) {
         html += `<div class="sermon-section"><div class="label">📖 Introduction</div><div class="content">${escapeHtml(c.introduction)}</div></div>`;
       }
-
-      // 4. Scripture Reading
       if (c.scriptureReading) {
         html += `<div class="sermon-section"><div class="label">📖 Scripture Reading</div>`;
         if (c.scriptureReading.verses) {
@@ -1483,8 +1525,6 @@
         }
         html += `</div>`;
       }
-
-      // 5. Main Points
       if (c.mainPoints && c.mainPoints.length) {
         html += `<div class="sermon-section"><div class="label">📌 Main Points</div>`;
         c.mainPoints.forEach((p, i) => {
@@ -1517,23 +1557,15 @@
         });
         html += `</div>`;
       }
-
-      // 6. Illustrations
       if (c.illustrations && c.illustrations.length) {
         html += `<div class="sermon-section"><div class="label">💡 Illustrations</div><div class="content">${c.illustrations.map(i => '• ' + escapeHtml(i)).join('<br>')}</div></div>`;
       }
-
-      // 7. Conclusion
       if (c.conclusion) {
         html += `<div class="sermon-section"><div class="label">📝 Conclusion</div><div class="content">${escapeHtml(c.conclusion)}</div></div>`;
       }
-
-      // 8. Call to Prayer
       if (c.callToPrayer && c.callToPrayer.length) {
         html += `<div class="sermon-section"><div class="label">🙏 Call to Prayer</div><div class="content">${c.callToPrayer.map(p => '• ' + escapeHtml(p)).join('<br>')}</div></div>`;
       }
-
-      // 9. Closing Prayer
       if (c.closingPrayer) {
         html += `<div class="sermon-section"><div class="label">🙏 Closing Prayer</div><div class="content">${escapeHtml(c.closingPrayer)}</div></div>`;
       }
@@ -1649,10 +1681,6 @@
       `).join('');
     }
 
-    function loadLiveNotes() {
-      // Live notes are loaded when a history item is clicked
-    }
-
     document.getElementById('saveLiveNotesBtn').addEventListener('click', async () => {
       const title = document.getElementById('liveSermonTitle').value.trim();
       if (!title) { showToast('Please enter a sermon title.'); return; }
@@ -1702,13 +1730,48 @@
       }
     });
 
-    // Close sidebar on resize to desktop
     window.addEventListener('resize', () => {
       if (window.innerWidth > 768) {
         document.getElementById('sidebar').classList.remove('open');
         document.getElementById('sidebarOverlay').classList.remove('active');
       }
     });
+
+    // ====== PWA INSTALL ======
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const fab = document.getElementById('installBtn');
+      if (fab) fab.style.display = 'flex';
+    });
+
+    document.getElementById('installBtn')?.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.getElementById('installBtn').style.display = 'none';
+        }
+        deferredPrompt = null;
+      } else {
+        showToast('Use browser menu → Add to Home Screen');
+      }
+    });
+
+    // ====== iOS BANNER ======
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isIOS && !isStandalone) {
+      document.getElementById('iosBanner').style.display = 'block';
+    }
+
+    // ====== REGISTER SERVICE WORKER ======
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.error('❌ Service Worker registration failed:', err));
+    }
   </script>
 </body>
 </html>
