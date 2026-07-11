@@ -16,7 +16,6 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Verify Firebase token
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing authorization token' });
@@ -80,24 +79,47 @@ STRUCTURE:
 
 2. TITLE: A compelling, scripture-based title that captures the heart of the message.
 
-3. SCRIPTURE READING: Minimum of 5 verses. Display them in full with references.
+3. INTRODUCTION: A few introductory words to set the stage. Define the topic in simple, layman's terms so the congregation can understand even before you dive into the main points.
 
-4. MAIN POINTS (4-7 points):
+For example:
+"Happy Sunday once again my people. This morning, we want to engage ourselves quickly in the Word of God. Our topic for today's sermon is 'Having Faith in Christ.' Firstly, what do we mean by faith? Faith is not just believing that God exists. Even the demons believe that. Faith is trusting God even when you cannot see the outcome..."
+
+This section should help the congregation catch up before you start listing the points and illustrations.
+
+4. SCRIPTURE READING: Minimum of 5 verses. Display them in full with references.
+
+5. MAIN POINTS (4-7 points):
    For each point:
    - Point Title (scripture-backed)
    - Deep Explanation: Go beyond the surface. Explain the original context, meaning, and application.
    - Supporting Scriptures (2-3 verses per point)
-   - Consequences (where applicable):
-     - If you do this: what happens
-     - If you don't: what happens
+   - Consequences (in two parts):
+     - advantages: First, list what happens when you do this. Give clear, practical blessings. (3-4 points)
+     - disadvantages: Then, transition with "On the contrary..." and list what happens when you don't do this. (3-4 points)
 
-5. ILLUSTRATIONS / APPLICATIONS: Real-world stories, examples, or practical applications for each point. Make them relatable and memorable.
+   Example consequence structure:
+   "consequences": {
+     "advantages": [
+       "Advantage 1: When you place your trust in God, you experience peace that surpasses all understanding.",
+       "Advantage 2: You receive divine guidance and direction for your life.",
+       "Advantage 3: Your faith becomes a testimony to others.",
+       "Advantage 4: You are protected and provided for by God."
+     ],
+     "disadvantages": [
+       "Consequence 1: Without trust in God, you live in constant anxiety and fear.",
+       "Consequence 2: You miss out on God's best for your life.",
+       "Consequence 3: Your lack of faith hinders your relationship with God.",
+       "Consequence 4: You become easily shaken by life's storms."
+     ]
+   }
 
-6. CONCLUSION: A strong, memorable summary with a clear call to action. Should leave the listener challenged and encouraged.
+6. ILLUSTRATIONS / APPLICATIONS: Real-world stories, examples, or practical applications for each point. Make them relatable and memorable.
 
-7. CALL TO PRAYER: 3-5 specific prayer points that reinforce the message. These should be actionable prayer requests.
+7. CONCLUSION: A strong, memorable summary that ties all the points together. Include a clear call to action. This should leave the listener challenged and encouraged.
 
-8. CLOSING PRAYER: A full closing prayer that sends the congregation out with a blessing and a challenge.
+8. CALL TO PRAYER / PRAYER POINTS: 3-5 specific prayer points that reinforce the message. These should be actionable prayer requests that the congregation can pray about during the week. For example: "Pray for the faith to trust God even when you cannot see the outcome", "Pray for strength to obey God's Word even when it's difficult."
+
+9. CLOSING PRAYER: A full closing prayer that sends the congregation out with a blessing and a challenge. This should be a complete prayer, not just a sentence.
 
 STYLE:
 - Warm and pastoral, not academic
@@ -107,12 +129,12 @@ STYLE:
 - Aim for 800-1200 words minimum for a full sermon
 
 Return the response as a JSON object with the following keys:
-openingPrayer, title, scriptureReading (an object with a "verses" array of {reference, text}), mainPoints (array of objects with title, explanation, supportingScriptures (array of {reference, text}), consequences (if applicable with ifDo and ifNot)), illustrations (array), conclusion, callToPrayer (array), closingPrayer.`;
+openingPrayer, title, introduction, scriptureReading (an object with a "verses" array of {reference, text}), mainPoints (array of objects with title, explanation, supportingScriptures (array of {reference, text}), consequences (an object with "advantages" array and "disadvantages" array)), illustrations (array), conclusion, callToPrayer (array), closingPrayer.`;
 
   const userPrompt = `Topic: ${topic}\nScripture: ${scripture || 'None provided'}\n\nGenerate a complete, deep, reflective sermon using the structure above.`;
 
   const payload = JSON.stringify({
-    model: 'openai/gpt-oss-120b', // 🔁 Updated to new GPT model
+    model: 'openai/gpt-oss-120b',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
