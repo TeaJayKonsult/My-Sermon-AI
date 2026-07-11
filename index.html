@@ -740,15 +740,39 @@
     .sermon-output .sermon-point .pconsequence {
       background: rgba(45, 106, 107, 0.15);
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 12px 16px;
       margin-top: 6px;
-      font-size: 13px;
     }
-    .sermon-output .sermon-point .pconsequence .ifdo {
+    .sermon-output .sermon-point .pconsequence .advantages {
+      margin-bottom: 8px;
+    }
+    .sermon-output .sermon-point .pconsequence .advantages .label {
       color: #7ac7c9;
+      font-size: 12px;
+      font-weight: 700;
     }
-    .sermon-output .sermon-point .pconsequence .ifnot {
+    .sermon-output .sermon-point .pconsequence .advantages .item {
+      color: #7ac7c9;
+      font-size: 13px;
+      padding-left: 12px;
+      margin-top: 2px;
+    }
+    .sermon-output .sermon-point .pconsequence .disadvantages .label {
       color: #d47a7a;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .sermon-output .sermon-point .pconsequence .disadvantages .item {
+      color: #d47a7a;
+      font-size: 13px;
+      padding-left: 12px;
+      margin-top: 2px;
+    }
+    .sermon-output .sermon-point .pconsequence .transition {
+      color: rgba(245, 239, 230, 0.5);
+      font-style: italic;
+      margin: 8px 0 6px 0;
+      font-size: 13px;
     }
 
     .loading-spinner {
@@ -1059,7 +1083,7 @@
   </div>
 
   <script>
-    // ====== FIREBASE CONFIG (YOUR ACTUAL CONFIG) ======
+    // ====== FIREBASE CONFIG ======
     const firebaseConfig = {
       apiKey: "AIzaSyB-12hP7mWiohuW12HvciNnJHcdkP-nhW0",
       authDomain: "my-sermon-ai-by-pamilerin.firebaseapp.com",
@@ -1367,6 +1391,7 @@
       }
     });
 
+    // ====== DISPLAY SERMON (UPDATED) ======
     function displaySermon(data) {
       const output = document.getElementById('sermonOutput');
       const c = data.content;
@@ -1380,6 +1405,11 @@
       // Title
       if (c.title) {
         html += `<div class="sermon-section"><div class="label">📝 Title</div><div class="content"><strong>${escapeHtml(c.title)}</strong></div></div>`;
+      }
+
+      // Introduction (NEW)
+      if (c.introduction) {
+        html += `<div class="sermon-section"><div class="label">📖 Introduction</div><div class="content">${escapeHtml(c.introduction)}</div></div>`;
       }
 
       // Scripture Reading
@@ -1403,11 +1433,25 @@
           if (p.supportingScriptures && p.supportingScriptures.length) {
             html += `<div class="pscripture">📖 ${p.supportingScriptures.map(s => escapeHtml(s.reference)).join(', ')}</div>`;
           }
+          // Consequences - Advantages first, then Disadvantages
           if (p.consequences) {
-            html += `<div class="pconsequence">
-              ${p.consequences.ifDo ? `<div class="ifdo">✅ If you do: ${escapeHtml(p.consequences.ifDo)}</div>` : ''}
-              ${p.consequences.ifNot ? `<div class="ifnot">❌ If you don't: ${escapeHtml(p.consequences.ifNot)}</div>` : ''}
-            </div>`;
+            html += `<div class="pconsequence">`;
+            if (p.consequences.advantages && p.consequences.advantages.length) {
+              html += `<div class="advantages"><div class="label">✅ Advantages:</div>`;
+              p.consequences.advantages.forEach(a => {
+                html += `<div class="item">• ${escapeHtml(a)}</div>`;
+              });
+              html += `</div>`;
+            }
+            if (p.consequences.disadvantages && p.consequences.disadvantages.length) {
+              html += `<div class="transition">❌ On the contrary, if you do not do this...</div>`;
+              html += `<div class="disadvantages"><div class="label">❌ Disadvantages / Consequences:</div>`;
+              p.consequences.disadvantages.forEach(d => {
+                html += `<div class="item">• ${escapeHtml(d)}</div>`;
+              });
+              html += `</div>`;
+            }
+            html += `</div>`;
           }
           html += `</div>`;
         });
@@ -1465,6 +1509,7 @@
       let text = '✝️ Sermon: ' + currentSermon.title + '\n\n';
       if (c.openingPrayer) text += '🙏 Opening Prayer:\n' + c.openingPrayer + '\n\n';
       if (c.title) text += '📝 Title: ' + c.title + '\n\n';
+      if (c.introduction) text += '📖 Introduction:\n' + c.introduction + '\n\n';
       if (c.scriptureReading && c.scriptureReading.verses) {
         text += '📖 Scripture Reading:\n';
         c.scriptureReading.verses.forEach(v => { text += v.reference + ' — ' + v.text + '\n'; });
@@ -1476,8 +1521,14 @@
           text += '   ' + p.explanation + '\n';
           if (p.supportingScriptures) text += '   📖 ' + p.supportingScriptures.map(s => s.reference).join(', ') + '\n';
           if (p.consequences) {
-            if (p.consequences.ifDo) text += '   ✅ If you do: ' + p.consequences.ifDo + '\n';
-            if (p.consequences.ifNot) text += '   ❌ If you don\'t: ' + p.consequences.ifNot + '\n';
+            if (p.consequences.advantages) {
+              text += '   ✅ Advantages:\n';
+              p.consequences.advantages.forEach(a => { text += '   • ' + a + '\n'; });
+            }
+            if (p.consequences.disadvantages) {
+              text += '   ❌ On the contrary:\n';
+              p.consequences.disadvantages.forEach(d => { text += '   • ' + d + '\n'; });
+            }
           }
           text += '\n';
         });
@@ -1501,6 +1552,7 @@
       const c = currentSermon.content;
       let text = '✝️ Sermon: ' + currentSermon.title + '\n\n';
       if (c.openingPrayer) text += '🙏 ' + c.openingPrayer + '\n\n';
+      if (c.introduction) text += '📖 ' + c.introduction + '\n\n';
       if (c.mainPoints) {
         c.mainPoints.forEach((p, i) => {
           text += i + 1 + '. ' + p.title + '\n';
