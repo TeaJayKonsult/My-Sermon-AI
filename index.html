@@ -6,7 +6,6 @@
   <meta name="theme-color" content="#0b0e1a">
   <meta name="description" content="My Sermon AI — Generate deep, reflective sermons with AI. Listen, take notes, and save your sermons.">
   <title>My Sermon AI | TeaJay Konsult Ltd.</title>
-  <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Georgia:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,7 +14,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <style>
-    /* ====== HEAVENLY/SACRED UI ====== */
+    /* ====== HEAVENLY/SACRED UI (unchanged) ====== */
     * {
       margin: 0;
       padding: 0;
@@ -1465,7 +1464,7 @@
       }
     }
 
-    // ====== GENERATE SERMON ======
+    // ====== GENERATE SERMON (UPDATED WITH USAGE LIMIT HANDLING) ======
     document.getElementById('generateSermonBtn').addEventListener('click', async () => {
       const topic = document.getElementById('sermonTopic').value.trim();
       const scripture = document.getElementById('sermonScripture').value.trim();
@@ -1482,8 +1481,19 @@
           body: JSON.stringify({ topic, scripture })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Generation failed');
 
+        if (!res.ok) {
+          // ====== HANDLE RATE LIMIT / USAGE LIMIT ======
+          if (res.status === 429 && data.error === 'limit_reached') {
+            // Friendly message for limit reached
+            const msg = `🙏 You've used all ${data.limit} free sermons this month. Your limit resets in ${data.remainingDays} days.`;
+            showToast(msg);
+            return;
+          }
+          throw new Error(data.error || 'Generation failed');
+        }
+
+        // ====== SUCCESS ======
         currentSermon = {
           title: topic,
           scripture: scripture || 'None provided',
@@ -1494,6 +1504,7 @@
         displaySermon(currentSermon);
         document.getElementById('sermonResult').style.display = 'block';
         showToast('✅ Sermon generated!');
+
       } catch (err) {
         showToast('❌ Error: ' + err.message);
       } finally {
@@ -1718,7 +1729,7 @@
       showToast('✅ PDF downloaded');
     });
 
-    // ====== SIDEBAR CLOSE ON OVERLAY CLICK ======
+    // ====== SIDEBAR CLOSE ======
     document.addEventListener('click', function(e) {
       if (window.innerWidth <= 768) {
         const sidebar = document.getElementById('sidebar');
