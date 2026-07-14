@@ -892,6 +892,27 @@
       line-height: 1.6;
     }
 
+    /* ====== USAGE COUNTER ====== */
+    .usage-counter {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--heavenly-border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .usage-counter .label {
+      font-size: 13px;
+      color: var(--sub);
+    }
+    .usage-counter .count {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--heavenly-gold);
+    }
+
     /* ====== MOBILE RESPONSIVE ====== */
     @media (max-width: 768px) {
       #menuToggle {
@@ -1101,6 +1122,13 @@
 
       <!-- Tab 1: Generate Sermon -->
       <div id="tabGenerate" class="tab-content active">
+
+        <!-- ====== USAGE COUNTER ====== -->
+        <div class="usage-counter">
+          <span class="label">📊 Sermons this month</span>
+          <span class="count" id="usageDisplay">0 / 5</span>
+        </div>
+
         <div class="heavenly-card">
           <div class="card-title">📖 Generate a Sermon</div>
           <div class="card-sub">Enter a topic or scripture passage, and AI will generate a complete, deep, reflective sermon.</div>
@@ -1199,6 +1227,7 @@
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menuToggle');
     const overlay = document.getElementById('sidebarOverlay');
+    const usageDisplay = document.getElementById('usageDisplay');
 
     // ====== STATE ======
     let currentUser = null;
@@ -1375,6 +1404,22 @@
       });
     });
 
+    // ====== USAGE COUNTER ======
+    async function loadUsageCounter() {
+      if (!currentUser) return;
+      try {
+        const doc = await db.collection('users').doc(currentUser.uid).get();
+        if (doc.exists) {
+          const data = doc.data();
+          const used = data.generationsUsedThisMonth || 0;
+          const limit = data.plan === 'pro' ? 15 : 5;
+          usageDisplay.textContent = `${used} / ${limit}`;
+        }
+      } catch (err) {
+        console.error('Error loading usage:', err);
+      }
+    }
+
     // ====== AUTH STATE ======
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -1396,6 +1441,7 @@
         loadHistory();
         loadLiveNotes();
         fetchSermonCount();
+        loadUsageCounter();
       } else {
         currentUser = null;
         landingPage.style.display = 'flex';
@@ -1464,7 +1510,7 @@
       }
     }
 
-    // ====== GENERATE SERMON (UPDATED WITH USAGE LIMIT HANDLING) ======
+    // ====== GENERATE SERMON (UPDATED) ======
     document.getElementById('generateSermonBtn').addEventListener('click', async () => {
       const topic = document.getElementById('sermonTopic').value.trim();
       const scripture = document.getElementById('sermonScripture').value.trim();
@@ -1483,11 +1529,11 @@
         const data = await res.json();
 
         if (!res.ok) {
-          // ====== HANDLE RATE LIMIT / USAGE LIMIT ======
+          // ====== HANDLE USAGE LIMIT ======
           if (res.status === 429 && data.error === 'limit_reached') {
-            // Friendly message for limit reached
             const msg = `🙏 You've used all ${data.limit} free sermons this month. Your limit resets in ${data.remainingDays} days.`;
             showToast(msg);
+            loadUsageCounter(); // Refresh the counter
             return;
           }
           throw new Error(data.error || 'Generation failed');
@@ -1504,6 +1550,7 @@
         displaySermon(currentSermon);
         document.getElementById('sermonResult').style.display = 'block';
         showToast('✅ Sermon generated!');
+        loadUsageCounter(); // Refresh the counter
 
       } catch (err) {
         showToast('❌ Error: ' + err.message);
