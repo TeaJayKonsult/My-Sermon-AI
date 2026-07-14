@@ -8,6 +8,14 @@ if (!admin.apps.length) {
     credential: admin.credential.cert(serviceAccount)
   });
 }
+const db = admin.firestore();
+
+// Helper: get days remaining until next month
+function getDaysUntilNextMonth(date) {
+  const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const diff = nextMonth - date;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,6 +24,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // ====== VERIFY FIREBASE TOKEN ======
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing authorization token' });
@@ -55,6 +64,7 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 
+  // ====== PARSE REQUEST BODY ======
   let body;
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -64,12 +74,56 @@ module.exports = async function handler(req, res) {
   const { topic, scripture } = body;
   if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
+  // ====== USER USAGE TRACKING ======
+  const userRef = db.collection('users').doc(userId);
+  const userDoc = await userRef.get();
+  let userData = userDoc.exists ? userDoc.data() : null;
+
+  if (!userData) {
+    const now = new Date();
+    await userRef.set({
+      plan: 'free',               // free | pro (future)
+      generationsUsedThisMonth: 0,
+      monthlyResetDate: now.toISOString(),
+      createdAt: now.toISOString()
+    });
+    userData = { plan: 'free', generationsUsedThisMonth: 0, monthlyResetDate: now.toISOString() };
+  }
+
+  // Check monthly reset
+  const lastReset = new Date(userData.monthlyResetDate);
+  const now = new Date();
+
+  if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+    await userRef.update({
+      generationsUsedThisMonth: 0,
+      monthlyResetDate: now.toISOString()
+    });
+    userData.generationsUsedThisMonth = 0;
+  }
+
+  // Determine limit
+  const limit = userData.plan === 'pro' ? 15 : 5;
+
+  // Check if limit reached
+  if (userData.generationsUsedThisMonth >= limit) {
+    const remainingDays = getDaysUntilNextMonth(now);
+    return res.status(429).json({
+      error: 'limit_reached',
+      message: `You've used all ${limit} free sermons this month. Your limit resets in ${remainingDays} days.`,
+      remainingDays: remainingDays,
+      limit: limit,
+      used: userData.generationsUsedThisMonth
+    });
+  }
+
+  // ====== CALL GROQ API ======
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) return res.status(500).json({ error: 'GROQ_API_KEY missing' });
 
   const systemPrompt = `You are a seasoned Nigerian pastor and theologian with deep knowledge of Scripture. You have been preaching and teaching for decades.
 
-Your task is to generate a complete, deep, and reflective sermon that moves the heart and challenges the mind. Use Nigerian English and grammar. 
+Your task is to generate a complete, deep, and reflective sermon that moves the heart and challenges the mind. Use Nigerian English and your grammar should be easy to understand. 
 
 The sermon should be pastorally warm, theologically sound, and practically applicable. Avoid shallow clichés. Go deep.
 
@@ -97,27 +151,11 @@ This section should help the congregation catch up before you start listing the 
      - advantages: First, list what happens when you do this. Give clear, practical blessings. (3-4 points)
      - disadvantages: Then, transition with "On the contrary..." and list what happens when you don't do this. (3-4 points)
 
-   Example consequence structure:
-   "consequences": {
-     "advantages": [
-       "Advantage 1: When you place your trust in God, you experience peace that surpasses all understanding.",
-       "Advantage 2: You receive divine guidance and direction for your life.",
-       "Advantage 3: Your faith becomes a testimony to others.",
-       "Advantage 4: You are protected and provided for by God."
-     ],
-     "disadvantages": [
-       "Consequence 1: Without trust in God, you live in constant anxiety and fear.",
-       "Consequence 2: You miss out on God's best for your life.",
-       "Consequence 3: Your lack of faith hinders your relationship with God.",
-       "Consequence 4: You become easily shaken by life's storms."
-     ]
-   }
-
-6. ILLUSTRATIONS / APPLICATIONS: Real-world stories, examples, or practical applications for each point. Make them relatable and memorable.
+6. ILLUSTRATIONS / APPLICATIONS: Real-world stories, examples, or practical applications for 2 or 3 points. Make them relatable and memorable.
 
 7. CONCLUSION: A strong, memorable summary that ties all the points together. Include a clear call to action. This should leave the listener challenged and encouraged.
 
-8. CALL TO PRAYER / PRAYER POINTS: 3-5 specific prayer points that reinforce the message. These should be actionable prayer requests that the congregation can pray about during the week. For example: "Pray for the faith to trust God even when you cannot see the outcome", "Pray for strength to obey God's Word even when it's difficult."
+8. CALL TO PRAYER / PRAYER POINTS: 3-5 specific prayer points that reinforce the message. These should be actionable prayer requests that the congregation can pray about during the week.
 
 9. CLOSING PRAYER: A full closing prayer that sends the congregation out with a blessing and a challenge. This should be a complete prayer, not just a sentence.
 
@@ -126,7 +164,7 @@ STYLE:
 - Deep and reflective, not shallow
 - Accessible yet profound
 - Use scripture naturally and meaningfully
-- Aim for 4000-6000 words minimum for a full sermon
+- Aim for 4000-5500 words minimum for a full sermon
 
 Return the response as a JSON object with the following keys:
 openingPrayer, title, introduction, scriptureReading (an object with a "verses" array of {reference, text}), mainPoints (array of objects with title, explanation, supportingScriptures (array of {reference, text}), consequences (an object with "advantages" array and "disadvantages" array)), illustrations (array), conclusion, callToPrayer (array), closingPrayer.`;
@@ -170,6 +208,12 @@ openingPrayer, title, introduction, scriptureReading (an object with a "verses" 
     });
     const content = groqResponse.choices[0].message.content;
     const sermon = JSON.parse(content);
+
+    // ====== INCREMENT USAGE COUNTER ======
+    await userRef.update({
+      generationsUsedThisMonth: admin.firestore.FieldValue.increment(1)
+    });
+
     res.status(200).json(sermon);
   } catch (err) {
     console.error('Groq error:', err.message);
